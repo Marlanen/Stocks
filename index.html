@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Акции">
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" id="pwa-manifest">
+<title>Акции · Портфель</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d1117; --card:#161b22; --card2:#1c2333; --border:#30363d;
+  --accent:#3fb950; --accent2:#f78166; --accent3:#79c0ff;
+  --purple:#bc8cff; --yellow:#e3b341; --red:#f85149;
+  --text:#e6edf3; --text2:#8b949e; --text3:#484f58;
+  --alfa:#d04040; --sber:#3fb950;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overscroll-behavior:none;}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);padding-top:var(--safe-top);padding-bottom:var(--safe-bottom);overflow-x:hidden;}
+
+.topbar{position:sticky;top:0;z-index:100;background:rgba(13,17,23,0.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 16px 10px;}
+.topbar-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.app-title{font-size:17px;font-weight:800;letter-spacing:-0.5px;}
+.app-title span{color:var(--accent);}
+.refresh-btn{width:34px;height:34px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-appearance:none;}
+.refresh-btn:active{transform:scale(0.92);}
+.refresh-btn.spinning{animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.tabs{display:flex;gap:3px;background:var(--card2);border-radius:12px;padding:3px;}
+.tab-btn{flex:1;text-align:center;padding:7px 3px;border-radius:9px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text2);background:transparent;border:none;transition:all 0.2s;-webkit-appearance:none;white-space:nowrap;}
+.tab-btn.active{background:var(--accent);color:#0d1117;}
+
+.status-strip{display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);min-height:32px;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all 0.3s;}
+.dot.ok{background:var(--accent);box-shadow:0 0 6px var(--accent);}
+.dot.loading{background:var(--yellow);animation:blink 0.8s infinite;}
+.dot.err{background:var(--accent2);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.progress{flex:1;height:2px;background:var(--border);border-radius:2px;overflow:hidden;display:none;}
+.progress.show{display:block;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:2px;transition:width 0.25s ease;}
+
+/* ── SUMMARY 3 колонки ── */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 16px;border-bottom:1px solid var(--border);}
+.s-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 6px;text-align:center;}
+.s-label{font-size:8px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;}
+.s-val{font-size:13px;font-weight:800;line-height:1.2;}
+
+.scroll-area{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:calc(16px + var(--safe-bottom));}
+
+/* ── КАРТОЧКА ЭМИТЕНТА ── */
+.stock-group{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:9px;overflow:hidden;}
+.stock-header{padding:11px 13px;background:var(--card2);cursor:pointer;user-select:none;}
+.stock-header:active{opacity:0.85;}
+.sh-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.stock-name-wrap{display:flex;align-items:center;gap:7px;flex:1;min-width:0;}
+.stock-name{font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.split-badge{font-size:8px;font-weight:700;background:rgba(227,179,65,0.15);color:var(--yellow);border:1px solid rgba(227,179,65,0.3);border-radius:4px;padding:2px 5px;flex-shrink:0;}
+.sector-badge{font-size:8px;font-weight:700;border-radius:4px;padding:2px 5px;flex-shrink:0;}
+.sh-row2{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+.stock-total-val{font-size:14px;font-weight:800;color:var(--accent3);}
+.stock-total-gain{font-size:11px;font-weight:700;}
+.stock-total-gain.pos{color:var(--accent);}
+.stock-total-gain.neg{color:var(--accent2);}
+.sh-right{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.portfolio-pct{font-size:10px;color:var(--text2);font-weight:600;}
+.chevron{font-size:10px;color:var(--text3);transition:transform 0.2s;}
+.stock-group.open .chevron{transform:rotate(180deg);}
+.stock-group-body{display:none;}
+.stock-group.open .stock-group-body{display:block;}
+.pct-bar{height:2px;background:var(--border);margin:0 13px;border-radius:2px;overflow:hidden;}
+.pct-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent3),var(--accent));}
+
+/* ── СТРОКА БРОКЕРА ── */
+.broker-row{padding:11px 13px;border-top:1px solid var(--border);}
+.br-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;}
+.br-left{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.broker-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0;}
+.broker-badge.sber{background:rgba(63,185,80,0.15);color:var(--sber);border:1px solid rgba(63,185,80,0.3);}
+.broker-badge.alfa{background:rgba(208,64,64,0.15);color:var(--alfa);border:1px solid rgba(208,64,64,0.3);}
+.br-qty{font-size:11px;font-weight:600;background:var(--card2);border-radius:4px;padding:2px 6px;color:var(--text2);}
+.br-avgprice{font-size:10px;color:var(--text3);}
+.br-right{text-align:right;flex-shrink:0;}
+.br-value{font-size:13px;font-weight:800;color:var(--accent3);}
+.br-gain{font-size:11px;font-weight:700;margin-top:2px;}
+.br-gain.pos{color:var(--accent);}
+.br-gain.neg{color:var(--accent2);}
+.br-bottom{display:flex;align-items:center;justify-content:space-between;}
+.br-curprice{font-size:11px;color:var(--yellow);font-weight:600;}
+.br-portpct{font-size:10px;color:var(--text3);}
+.gain-bar-bg{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:7px;}
+.gain-bar-fill{height:100%;border-radius:2px;}
+
+/* ── АНАЛИТИКА ── */
+.an-section{margin-bottom:18px;}
+.an-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px;}
+.kpi-label{font-size:9px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.kpi-val{font-size:18px;font-weight:800;line-height:1;}
+.kpi-sub{font-size:10px;color:var(--text2);margin-top:4px;}
+.kpi-card.wide{grid-column:1/-1;}
+
+/* Брокер-сравнение */
+.broker-compare{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.bc-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px;}
+.bc-title{font-size:11px;font-weight:700;margin-bottom:8px;}
+.bc-val{font-size:16px;font-weight:800;color:var(--accent3);margin-bottom:3px;}
+.bc-gain{font-size:12px;font-weight:700;}
+.bc-gain.pos{color:var(--accent);}
+.bc-gain.neg{color:var(--accent2);}
+.bc-sub{font-size:10px;color:var(--text2);margin-top:3px;}
+.bc-bar-bg{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:9px;}
+.bc-bar-fill{height:100%;border-radius:2px;}
+
+/* Топ-список */
+.top-list{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;}
+.top-item{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border-bottom:1px solid var(--border);gap:10px;}
+.top-item:last-child{border-bottom:none;}
+.top-rank{font-size:11px;font-weight:800;color:var(--text3);width:16px;flex-shrink:0;}
+.top-info{flex:1;min-width:0;}
+.top-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.top-sub{font-size:10px;color:var(--text2);margin-top:2px;}
+.top-val{font-size:12px;font-weight:800;flex-shrink:0;text-align:right;}
+.top-val.pos{color:var(--accent);}
+.top-val.neg{color:var(--accent2);}
+
+/* Donut */
+.donut-wrap{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px;display:flex;align-items:center;gap:13px;flex-wrap:wrap;}
+.donut-list{flex:1;min-width:120px;}
+.donut-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:6px;}
+.donut-row:last-child{margin-bottom:0;}
+.donut-name{font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.donut-right{text-align:right;flex-shrink:0;}
+.donut-pct{font-size:11px;font-weight:800;color:var(--accent3);}
+.donut-val{font-size:10px;color:var(--text2);}
+
+/* ── СЕКТОРЫ ── */
+.sector-row{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;margin-bottom:8px;}
+.sector-header{padding:11px 13px;background:var(--card2);display:flex;align-items:center;gap:10px;cursor:pointer;}
+.sector-icon{font-size:18px;flex-shrink:0;}
+.sector-hinfo{flex:1;min-width:0;}
+.sector-hname{font-size:13px;font-weight:800;}
+.sector-hvals{font-size:11px;color:var(--text2);margin-top:2px;}
+.sector-hright{text-align:right;flex-shrink:0;}
+.sector-hval{font-size:13px;font-weight:800;color:var(--accent3);}
+.sector-hgain{font-size:11px;font-weight:700;margin-top:2px;}
+.sector-hgain.pos{color:var(--accent);}
+.sector-hgain.neg{color:var(--accent2);}
+.sector-bar{height:3px;background:var(--border);margin:0 13px;overflow:hidden;border-radius:2px;}
+.sector-bar-fill{height:100%;border-radius:2px;}
+.sector-stocks{display:none;}
+.sector-row.open .sector-stocks{display:block;}
+.sector-row.open .chevron{transform:rotate(180deg);}
+.sector-stock-item{padding:9px 13px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.ssi-name{font-size:12px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ssi-broker{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;flex-shrink:0;}
+.ssi-right{text-align:right;flex-shrink:0;}
+.ssi-val{font-size:12px;font-weight:700;color:var(--accent3);}
+.ssi-gain{font-size:10px;font-weight:700;}
+.ssi-gain.pos{color:var(--accent);}
+.ssi-gain.neg{color:var(--accent2);}
+
+/* ── ДЕТИ ── */
+.child-section{margin-bottom:16px;}
+.child-header{background:var(--card2);border:1px solid var(--border);border-radius:13px;padding:12px 13px;margin-bottom:8px;}
+.child-name{font-size:15px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.child-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.child-kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 6px;text-align:center;}
+.ck-label{font-size:8px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;}
+.ck-val{font-size:12px;font-weight:800;line-height:1.2;}
+.child-stock-row{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.csr-info{flex:1;min-width:0;}
+.csr-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;}
+.csr-meta{font-size:10px;color:var(--text2);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.csr-qty{background:var(--card2);border-radius:3px;padding:1px 5px;font-weight:600;}
+.csr-right{text-align:right;flex-shrink:0;}
+.csr-val{font-size:13px;font-weight:800;color:var(--accent3);}
+.csr-gain{font-size:11px;font-weight:700;margin-top:2px;}
+.csr-gain.pos{color:var(--accent);}
+.csr-gain.neg{color:var(--accent2);}
+.csr-bar-bg{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:7px;}
+.csr-bar-fill{height:100%;border-radius:2px;}
+
+/* Сортировка */
+.sort-row{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-bottom:10px;padding-bottom:2px;}
+.sort-row::-webkit-scrollbar{display:none;}
+.sort-btn{flex-shrink:0;padding:5px 11px;border-radius:14px;font-size:11px;font-weight:600;background:var(--card2);border:1px solid var(--border);color:var(--text2);cursor:pointer;-webkit-appearance:none;}
+.sort-btn.active{background:var(--card);border-color:var(--accent3);color:var(--accent3);}
+
+/* Переключатель анал. брокер */
+.broker-switch{display:flex;gap:6px;margin-bottom:13px;}
+.broker-btn{flex:1;text-align:center;padding:9px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;background:var(--card2);color:var(--text2);border:1px solid var(--border);transition:all 0.15s;-webkit-appearance:none;}
+.broker-btn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);}
+
+/* Модал добавления */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-content{background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:500px;border-top:1px solid var(--border);}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:18px;}
+.field{margin-bottom:13px;}
+.field label{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;display:block;}
+.field input,.field select{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--text);font-size:15px;outline:none;font-family:inherit;}
+.btn-row{display:flex;gap:10px;margin-top:18px;}
+.btn{flex:1;padding:13px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;border:none;-webkit-appearance:none;}
+.btn-green{background:var(--accent);color:#0d1117;}
+.btn-gray{background:var(--card2);color:var(--text2);border:1px solid var(--border);}
+.add-btn{display:flex;align-items:center;gap:6px;background:rgba(63,185,80,0.10);border:1px solid rgba(63,185,80,0.3);color:var(--accent);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;}
+.add-btn:active{transform:scale(0.95);}
+.portfolio-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ph-title{font-size:12px;color:var(--text2);}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row1">
+    <div class="app-title">Акции<span>.</span>Портфель</div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAllPrices()">⟳</button>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('all')">📊 Все</button>
+    <button class="tab-btn" onclick="switchTab('sber')">🏦 Сбер</button>
+    <button class="tab-btn" onclick="switchTab('alfa')">🔴 Альфа</button>
+    <button class="tab-btn" onclick="switchTab('analytics')">📈 Аналитика</button>
+    <button class="tab-btn" onclick="switchTab('children')">👶 Дети</button>
+  </div>
+</div>
+
+<div class="status-strip">
+  <div class="dot" id="dot"></div>
+  <div id="statusText" style="flex:1">Загрузка цен с Мосбиржи...</div>
+  <div class="progress" id="progress"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+</div>
+
+<div class="summary" id="summary">
+  <div class="s-card">
+    <div class="s-label">Вложено</div>
+    <div class="s-val" style="color:var(--yellow)" id="s-invested">—</div>
+  </div>
+  <div class="s-card">
+    <div class="s-label">Стоимость</div>
+    <div class="s-val" style="color:var(--accent3)" id="s-value">—</div>
+  </div>
+  <div class="s-card">
+    <div class="s-label">Результат</div>
+    <div class="s-val" id="s-gain">—</div>
+  </div>
+</div>
+
+<div class="scroll-area" id="tab-all"><div style="text-align:center;padding:40px 0;color:var(--text2)">Загрузка...</div></div>
+<div class="scroll-area" id="tab-sber" style="display:none"></div>
+<div class="scroll-area" id="tab-alfa" style="display:none"></div>
+<div class="scroll-area" id="tab-analytics" style="display:none"><div id="analytics-content"></div></div>
+<div class="scroll-area" id="tab-children" style="display:none"><div id="children-content"></div></div>
+
+<div class="modal-overlay" id="add-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-content">
+    <div class="modal-title">➕ Добавить акцию</div>
+    <div class="field"><label>Брокер</label><select id="m-broker"><option value="sber">Сбер</option><option value="alfa">Альфа</option></select></div>
+    <div class="field"><label>ISIN</label><input id="m-isin" placeholder="RU0007661625"></div>
+    <div class="field"><label>Наименование</label><input id="m-name" placeholder="Газпром"></div>
+    <div class="field"><label>Количество</label><input id="m-qty" type="number" placeholder="100"></div>
+    <div class="field"><label>Средняя цена (₽)</label><input id="m-price" type="number" step="0.01" placeholder="127.19"></div>
+    <div class="btn-row">
+      <button class="btn btn-gray" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-green" onclick="confirmAdd()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// СЕКТОРНАЯ РАЗМЕТКА  (ISIN → сектор)
+// ══════════════════════════════════════════════════════
+const SECTORS = {
+  'RU0007288411': { name:'Металлы и добыча',  icon:'⛏️',  color:'#bc8cff' },
+  'RU0007661625': { name:'Нефть и газ',        icon:'🛢️',  color:'#e3b341' },
+  'RU0009062467': { name:'Нефть и газ',        icon:'🛢️',  color:'#e3b341' },
+  'RU000A0JPNM1': { name:'Электроэнергетика', icon:'⚡',  color:'#79c0ff' },
+  'RU0009024277': { name:'Нефть и газ',        icon:'🛢️',  color:'#e3b341' },
+  'RU000A108KL3': { name:'Здравоохранение',   icon:'🏥',  color:'#f78166' },
+  'RU000A0HL5M1': { name:'Потребительский',   icon:'🛒',  color:'#3fb950' },
+  'RU000A0DKVS5': { name:'Нефть и газ',        icon:'🛢️',  color:'#e3b341' },
+  'RU000A0ET7Y7': { name:'Электроэнергетика', icon:'⚡',  color:'#79c0ff' },
+  'RU000A0JPN96': { name:'Электроэнергетика', icon:'⚡',  color:'#79c0ff' },
+  'RU0009029540': { name:'Финансы',            icon:'🏦',  color:'#3fb950' },
+  'RU0009029524': { name:'Нефть и газ',        icon:'🛢️',  color:'#e3b341' },
+  'RU000A107UL4': { name:'Финансы / IT',       icon:'💳',  color:'#bc8cff' },
+  'RU0009033591': { name:'Нефть и газ',        icon:'🛢️',  color:'#e3b341' },
+  'RU0009091573': { name:'Транспорт',          icon:'🚂',  color:'#79c0ff' },
+  'RU000A0ZZG02': { name:'Девелопмент',        icon:'🏗️',  color:'#f78166' },
+  'RU000A10C1L6': { name:'Девелопмент',        icon:'🏗️',  color:'#f78166' },
+  'RU000A0JNGA5': { name:'Электроэнергетика', icon:'⚡',  color:'#79c0ff' },
+  'RU0009046510': { name:'Металлы и добыча',  icon:'⛏️',  color:'#bc8cff' },
+  'RU0009084446': { name:'Транспорт',          icon:'🚂',  color:'#79c0ff' },
+  'RU000A0J2Q06': { name:'Нефть и газ',        icon:'🛢️',  color:'#e3b341' },
+  'RU000A0JPNN9': { name:'Электроэнергетика', icon:'⚡',  color:'#79c0ff' },
+  'RU000A0JQUZ6': { name:'Потребительский',   icon:'🛒',  color:'#3fb950' },
+  'RU000A0ZZAC4': { name:'Финансы',            icon:'🏦',  color:'#3fb950' },
+  'RU000A107ER5': { name:'IT / Технологии',   icon:'💻',  color:'#79c0ff' },
+  'RU000A107J11': { name:'IT / Технологии',   icon:'💻',  color:'#79c0ff' },
+  'RU000A108X38': { name:'Потребительский',   icon:'🛒',  color:'#3fb950' },
+  'RU000A107T19': { name:'IT / Технологии',   icon:'💻',  color:'#79c0ff' },
+};
+function getSector(isin) {
+  return SECTORS[isin] || { name:'Прочее', icon:'📌', color:'#484f58' };
+}
+
+// ══════════════════════════════════════════════════════
+// ПОРТФЕЛИ
+// Т-Технологии: СПЛИТ 1:10 от 10.04.2026
+//   Сбер: было 42 × 2601.46 → стало 420 × 260.146
+//   Альфа: было 85 × 2845.61 → стало 850 × 284.561
+// ══════════════════════════════════════════════════════
+const DEFAULT_STOCKS = [
+  // ── СБЕР ──
+  { isin:'RU0007661625', name:'Газпром',                  qty:1540,    avgPrice:127.1873,   broker:'sber' },
+  { isin:'RU0009062467', name:'Газпром нефть',             qty:240,     avgPrice:522.2607,   broker:'sber' },
+  { isin:'RU000A0JPNM1', name:'Интер РАО',                qty:114800,  avgPrice:3.9041,     broker:'sber' },
+  { isin:'RU0009024277', name:'ЛУКОЙЛ',                   qty:109,     avgPrice:5694.7717,  broker:'sber' },
+  { isin:'RU000A108KL3', name:'МД Медикал Груп',          qty:340,     avgPrice:712.2501,   broker:'sber' },
+  { isin:'RU000A0HL5M1', name:'НоваБев Групп',            qty:740,     avgPrice:535.1732,   broker:'sber' },
+  { isin:'RU000A0DKVS5', name:'НОВАТЭК',                  qty:536,     avgPrice:1043.9498,  broker:'sber' },
+  { isin:'RU000A0ET7Y7', name:'Россети МР (МОЭСК)',       qty:220000,  avgPrice:1.3419,     broker:'sber' },
+  { isin:'RU000A0JPN96', name:'Россети ЦП',               qty:1100000, avgPrice:0.3470,     broker:'sber' },
+  { isin:'RU0009029540', name:'Сбербанк',                 qty:2920,    avgPrice:135.5813,   broker:'sber' },
+  { isin:'RU0009029524', name:'Сургутнефтегаз',           qty:9060,    avgPrice:40.5147,    broker:'sber' },
+  { isin:'RU000A107UL4', name:'Т-Технологии',             qty:420,     avgPrice:260.146,    broker:'sber', split:'1:10' },
+  { isin:'RU0009033591', name:'Татнефть',                 qty:620,     avgPrice:445.8891,   broker:'sber' },
+  { isin:'RU0009091573', name:'Транснефть ап',            qty:210,     avgPrice:1209.4262,  broker:'sber' },
+  { isin:'RU000A0ZZG02', name:'ГК Самолёт',               qty:64,      avgPrice:3576.3906,  broker:'sber' },
+  { isin:'RU000A10C1L6', name:'Эталон Груп',              qty:225,     avgPrice:55.187,     broker:'sber' },
+  { isin:'RU000A0JNGA5', name:'Юнипро',                   qty:44000,   avgPrice:1.8982,     broker:'sber' },
+  // ── АЛЬФА ──
+  { isin:'RU0007288411', name:'ГМК Норильский Никель',    qty:4500,    avgPrice:144.9422,   broker:'alfa' },
+  { isin:'RU0007661625', name:'Газпром',                  qty:820,     avgPrice:115.8537,   broker:'alfa' },
+  { isin:'RU0009029540', name:'Сбербанк',                 qty:5410,    avgPrice:252.2868,   broker:'alfa' },
+  { isin:'RU0009033591', name:'Татнефть',                 qty:320,     avgPrice:390.5469,   broker:'alfa' },
+  { isin:'RU0009046510', name:'Северсталь',               qty:90,      avgPrice:1142.2844,  broker:'alfa' },
+  { isin:'RU0009084446', name:'НМТП',                     qty:16900,   avgPrice:5.4086,     broker:'alfa' },
+  { isin:'RU0009091573', name:'Транснефть ап',            qty:350,     avgPrice:1326.9363,  broker:'alfa' },
+  { isin:'RU000A0DKVS5', name:'НОВАТЭК',                  qty:800,     avgPrice:1175.2891,  broker:'alfa' },
+  { isin:'RU000A0J2Q06', name:'Роснефть',                 qty:1700,    avgPrice:354.9374,   broker:'alfa' },
+  { isin:'RU000A0JPNM1', name:'Интер РАО',                qty:100400,  avgPrice:3.7621,     broker:'alfa' },
+  { isin:'RU000A0JPNN9', name:'ФСК Россети',              qty:1500000, avgPrice:0.1025,     broker:'alfa' },
+  { isin:'RU000A0JQUZ6', name:'Русагро',                  qty:1100,    avgPrice:179.079,    broker:'alfa' },
+  { isin:'RU000A0ZZAC4', name:'Совкомбанк',               qty:7000,    avgPrice:13.8214,    broker:'alfa' },
+  { isin:'RU000A107ER5', name:'Диасофт',                  qty:10,      avgPrice:3387.9,     broker:'alfa' },
+  { isin:'RU000A107J11', name:'Делимобиль',               qty:470,     avgPrice:319.7228,   broker:'alfa' },
+  { isin:'RU000A107UL4', name:'Т-Технологии',             qty:850,     avgPrice:284.561,    broker:'alfa', split:'1:10' },
+  { isin:'RU000A108KL3', name:'МД Медикал Груп',          qty:110,     avgPrice:836.4882,   broker:'alfa' },
+  { isin:'RU000A108X38', name:'ИКС 5',                    qty:50,      avgPrice:2604.72,    broker:'alfa' },
+];
+
+// ══════════════════════════════════════════════════════
+// ДЕТСКИЕ ПОРТФЕЛИ (данные из файла, статика)
+// Т-Технологии у Лизы: было 28 × 2969.12 → сплит 1:10 → 280 × 296.912
+// ══════════════════════════════════════════════════════
+const CHILDREN = [
+  {
+    name: 'Лиза', emoji: '👧',
+    stocks: [
+      { isin:'RU000A0DKVS5', name:'НОВАТЭК',        qty:45,   avgPrice:1256.0956, invested:56524.30,  currentPrice:1189,   currentValue:53505,    gain:-3019.30,   gainPct:-5.34 },
+      { isin:'RU000A107UL4', name:'Т-Технологии',   qty:280,  avgPrice:296.912,   invested:83135.50,  currentPrice:325.32, currentValue:91089.60, gain:7954.10,    gainPct:9.57,  split:'1:10' },
+      { isin:'RU0009091573', name:'Транснефть ап',  qty:27,   avgPrice:1334.7519, invested:36038.30,  currentPrice:1373,   currentValue:37071,    gain:1032.70,    gainPct:2.87 },
+      { isin:'RU000A107T19', name:'Яндекс',          qty:9,    avgPrice:4582,      invested:41238,     currentPrice:4284,   currentValue:38556,    gain:-2682,      gainPct:-6.50 },
+      { isin:'RU0009024277', name:'ЛУКОЙЛ',          qty:10,   avgPrice:5470.20,   invested:54702,     currentPrice:5374,   currentValue:53740,    gain:-962,       gainPct:-1.76 },
+      { isin:'RU000A0ZZAC4', name:'Совкомбанк',      qty:1900, avgPrice:12.57,     invested:23883,     currentPrice:12.72,  currentValue:24168,    gain:285,        gainPct:1.19 },
+    ]
+  },
+  {
+    name: 'Катерина', emoji: '👧',
+    stocks: [
+      { isin:'RU0007661625', name:'Газпром',         qty:40,   avgPrice:169.86,    invested:6794.40,   currentPrice:132.80, currentValue:5312,     gain:-1482.40,   gainPct:-21.82 },
+      { isin:'RU000A0JPNM1', name:'Интер РАО',       qty:1800, avgPrice:3.7942,    invested:6829.50,   currentPrice:3.202,  currentValue:5763.60,  gain:-1065.90,   gainPct:-15.61 },
+      { isin:'RU000A108KL3', name:'МД Медикал Груп', qty:1,    avgPrice:691.20,    invested:691.20,    currentPrice:1389.80,currentValue:1389.80,  gain:698.60,     gainPct:101.07 },
+      { isin:'RU000A0DKVS5', name:'НОВАТЭК',         qty:31,   avgPrice:1218.6774, invested:37779,     currentPrice:1189,   currentValue:36859,    gain:-920,       gainPct:-2.44 },
+      { isin:'RU0009029540', name:'Сбербанк',         qty:60,   avgPrice:247.12,    invested:14827.20,  currentPrice:315.12, currentValue:18907.20, gain:4080,       gainPct:27.52 },
+      { isin:'RU0009029524', name:'Сургутнефтегаз',  qty:160,  avgPrice:43.825,    invested:7012,      currentPrice:41.165, currentValue:6586.40,  gain:-425.60,    gainPct:-6.07 },
+      { isin:'RU000A10C1L6', name:'Эталон Груп',     qty:45,   avgPrice:86.52,     invested:3893.40,   currentPrice:35.53,  currentValue:1598.85,  gain:-2294.55,   gainPct:-58.93 },
+      { isin:'RU000A0J2Q06', name:'Роснефть',         qty:32,   avgPrice:491.1813,  invested:15717.80,  currentPrice:472.40, currentValue:15116.80, gain:-601,       gainPct:-3.82 },
+    ]
+  },
+  {
+    name: 'Алексей', emoji: '👦',
+    stocks: [
+      { isin:'RU0007661625', name:'Газпром',         qty:150,  avgPrice:162.792,   invested:24418.80,  currentPrice:132.80, currentValue:19920,    gain:-4498.80,   gainPct:-18.42 },
+      { isin:'RU000A0JPNM1', name:'Интер РАО',       qty:6900, avgPrice:4.0302,    invested:27808.15,  currentPrice:3.202,  currentValue:22093.80, gain:-5714.35,   gainPct:-20.55 },
+      { isin:'RU000A108KL3', name:'МД Медикал Груп', qty:11,   avgPrice:860.30,    invested:9463.30,   currentPrice:1389.80,currentValue:15287.80, gain:5824.50,    gainPct:61.55 },
+      { isin:'RU000A0DKVS5', name:'НОВАТЭК',         qty:20,   avgPrice:1184.71,   invested:23694.20,  currentPrice:1189,   currentValue:23780,    gain:85.80,      gainPct:0.36 },
+      { isin:'RU0009029540', name:'Сбербанк',         qty:100,  avgPrice:255.066,   invested:25506.60,  currentPrice:315.12, currentValue:31512,    gain:6005.40,    gainPct:23.54 },
+      { isin:'RU0009029524', name:'Сургутнефтегаз',  qty:600,  avgPrice:45.5557,   invested:27333.40,  currentPrice:41.165, currentValue:24699,    gain:-2634.40,   gainPct:-9.64 },
+      { isin:'RU000A10C1L6', name:'Эталон Груп',     qty:38,   avgPrice:86.9587,   invested:3304.43,   currentPrice:35.53,  currentValue:1350.14,  gain:-1954.29,   gainPct:-59.14 },
+      { isin:'RU000A0J2Q06', name:'Роснефть',         qty:24,   avgPrice:441.9125,  invested:10605.90,  currentPrice:472.40, currentValue:11337.60, gain:731.70,     gainPct:6.90 },
+      { isin:'RU000A0JNGA5', name:'Юнипро',           qty:2000, avgPrice:2.3295,    invested:4659,      currentPrice:1.4285, currentValue:2857,     gain:-1802,      gainPct:-38.68 },
+    ]
+  }
+];
+
+// ══════════════════════════════════════════════════════
+// СОСТОЯНИЕ
+// ══════════════════════════════════════════════════════
+const LS_KEY = 'stocks_v3';
+let allStocks = loadPortfolio();
+let prices = {};
+let currentTab = 'all';
+let analyticsBroker = 'all';
+let analyticsSubTab = 'summary'; // summary | sectors
+let sortMode = 'value';
+let isLoading = false;
+
+function loadPortfolio() {
+  try { const s = localStorage.getItem(LS_KEY); if (s) { const a = JSON.parse(s); if (a?.length) return a; } } catch {}
+  return DEFAULT_STOCKS.map(x => ({...x}));
+}
+function savePortfolio() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(allStocks)); } catch {}
+}
+
+// ══════════════════════════════════════════════════════
+// ФОРМАТИРОВАНИЕ — никаких сокращений «М» «К»
+// ══════════════════════════════════════════════════════
+function fmtRub(n) {
+  if (n == null) return '—';
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '−' : '';
+  if (abs >= 1000000) {
+    // Показываем миллионы с двумя знаками: 10 560 000 ₽
+    return sign + Math.abs(Math.round(n)).toLocaleString('ru-RU') + ' ₽';
+  }
+  return sign + Math.abs(Math.round(n)).toLocaleString('ru-RU') + ' ₽';
+}
+function fmtRubShort(n) {
+  // Для summary карточек — всегда полная цифра, маленький шрифт подстроится
+  if (n == null) return '—';
+  return Math.round(n).toLocaleString('ru-RU') + ' ₽';
+}
+function fmt2(n) {
+  if (n == null) return '—';
+  return n.toLocaleString('ru-RU', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function fmtPct(n) {
+  if (n == null) return '—';
+  return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+}
+function esc(s) { return s ? s.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;') : ''; }
+function cp(isin, avg) { return prices[isin] ?? avg; }
+
+// ══════════════════════════════════════════════════════
+// MOEX API
+// ══════════════════════════════════════════════════════
+async function fetchPrice(isin) {
+  try {
+    const r1 = await fetch(`https://iss.moex.com/iss/securities.json?q=${isin}&iss.meta=off&limit=5`);
+    const d1 = await r1.json();
+    const rows = d1?.securities?.data || [], cols = d1?.securities?.columns || [];
+    const row = rows.find(r => r[cols.indexOf('isin')] === isin);
+    if (!row) return null;
+    const secid = row[cols.indexOf('secid')];
+    const r2 = await fetch(`https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities/${secid}.json?iss.meta=off&iss.only=marketdata`);
+    const d2 = await r2.json();
+    const md = d2?.marketdata;
+    if (!md?.data?.length) return null;
+    const li = md.columns.indexOf('LAST'), pr = md.columns.indexOf('PREVPRICE');
+    return md.data[0][li] || md.data[0][pr] || null;
+  } catch { return null; }
+}
+
+async function loadAllPrices() {
+  if (isLoading) return;
+  isLoading = true;
+  document.getElementById('refreshBtn').classList.add('spinning');
+  setStatus('loading','Загрузка цен с Мосбиржи...',0);
+  // Все уникальные ISIN из основного портфеля + детских
+  const mainIsins = [...new Set(allStocks.map(s => s.isin))];
+  const kidIsins  = [...new Set(CHILDREN.flatMap(c => c.stocks.map(s => s.isin)))];
+  const isins = [...new Set([...mainIsins, ...kidIsins])];
+  let done = 0;
+  await Promise.all(isins.map(async isin => {
+    const p = await fetchPrice(isin);
+    if (p != null) prices[isin] = p;
+    done++;
+    if (done % 3 === 0 || done === isins.length)
+      setStatus('loading',`Загружено ${done} из ${isins.length}...`, Math.round(done/isins.length*100));
+  }));
+  setStatus('ok',`Цены обновлены · ${Object.keys(prices).length}/${isins.length} бумаг`);
+  document.getElementById('refreshBtn').classList.remove('spinning');
+  isLoading = false;
+  renderAll();
+}
+
+function setStatus(state, text, pct) {
+  document.getElementById('dot').className = 'dot ' + state;
+  document.getElementById('statusText').textContent = text;
+  const prog = document.getElementById('progress');
+  if (pct !== undefined) { prog.classList.add('show'); document.getElementById('progressFill').style.width = pct+'%'; }
+  else prog.classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════
+// SUMMARY
+// ══════════════════════════════════════════════════════
+function updateSummary(stocks) {
+  const inv  = stocks.reduce((s,x) => s + x.qty*x.avgPrice, 0);
+  const val  = stocks.reduce((s,x) => s + x.qty*cp(x.isin,x.avgPrice), 0);
+  const gain = val - inv;
+  const pct  = inv > 0 ? gain/inv*100 : 0;
+  document.getElementById('s-invested').textContent = fmtRubShort(inv);
+  document.getElementById('s-value').textContent    = fmtRubShort(val);
+  const gel = document.getElementById('s-gain');
+  gel.textContent = (gain>=0?'+':'')+fmtRubShort(gain)+'\n'+(pct>=0?'+':'')+pct.toFixed(1)+'%';
+  gel.style.color = gain>=0?'var(--accent)':'var(--accent2)';
+  gel.style.whiteSpace='pre'; gel.style.fontSize='11px'; gel.style.lineHeight='1.3'; gel.style.fontWeight='800';
+}
+
+// ══════════════════════════════════════════════════════
+// РЕНДЕР
+// ══════════════════════════════════════════════════════
+function renderAll() {
+  const stocks = currentTab==='sber' ? allStocks.filter(s=>s.broker==='sber')
+               : currentTab==='alfa' ? allStocks.filter(s=>s.broker==='alfa')
+               : allStocks;
+  if (currentTab !== 'analytics' && currentTab !== 'children') updateSummary(stocks);
+  if (currentTab==='analytics') { renderAnalytics(); return; }
+  if (currentTab==='children')  { renderChildren(); return; }
+  renderGrouped(stocks, `tab-${currentTab}`);
+}
+
+// ══════════════════════════════════════════════════════
+// ГРУППИРОВКА ПО ЭМИТЕНТУ
+// ══════════════════════════════════════════════════════
+function buildGroups(stocks) {
+  const map = new Map();
+  stocks.forEach(s => {
+    const cur = cp(s.isin, s.avgPrice);
+    const val = s.qty * cur, inv = s.qty * s.avgPrice, gain = val - inv;
+    const pct = inv > 0 ? gain/inv*100 : 0;
+    if (!map.has(s.name)) map.set(s.name, { name:s.name, isin:s.isin, split:s.split, brokers:[], totalVal:0, totalInv:0 });
+    const g = map.get(s.name);
+    g.brokers.push({ broker:s.broker, qty:s.qty, avgPrice:s.avgPrice, cur, val, inv, gain, pct });
+    g.totalVal += val; g.totalInv += inv;
+  });
+  return Array.from(map.values()).map(g => ({ ...g, totalGain:g.totalVal-g.totalInv, totalPct:g.totalInv>0?(g.totalVal-g.totalInv)/g.totalInv*100:0 }));
+}
+
+function sortGroups(groups) {
+  return [...groups].sort((a,b) => {
+    if (sortMode==='value')  return b.totalVal-a.totalVal;
+    if (sortMode==='gain')   return b.totalGain-a.totalGain;
+    if (sortMode==='gainpct')return b.totalPct-a.totalPct;
+    if (sortMode==='name')   return a.name.localeCompare(b.name,'ru');
+    return 0;
+  });
+}
+
+function renderGrouped(stocks, cid) {
+  const el = document.getElementById(cid);
+  const groups = sortGroups(buildGroups(stocks));
+  const portfolioVal = groups.reduce((s,g)=>s+g.totalVal,0);
+  const maxGain = Math.max(...groups.map(g=>Math.abs(g.totalGain)),1);
+
+  if (!groups.length) { el.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text2)">Нет данных</div>`; return; }
+
+  let html = `<div class="portfolio-header">
+    <div class="ph-title">${groups.length} эмитентов · ${stocks.length} позиций</div>
+    <button class="add-btn" onclick="openModal()">＋ Добавить</button>
+  </div>
+  <div class="sort-row">
+    <button class="sort-btn ${sortMode==='value'?'active':''}" onclick="setSort('value')">По стоимости</button>
+    <button class="sort-btn ${sortMode==='gain'?'active':''}" onclick="setSort('gain')">По результату ₽</button>
+    <button class="sort-btn ${sortMode==='gainpct'?'active':''}" onclick="setSort('gainpct')">По результату %</button>
+    <button class="sort-btn ${sortMode==='name'?'active':''}" onclick="setSort('name')">По имени</button>
+  </div>`;
+
+  groups.forEach((g, idx) => {
+    const sec = getSector(g.isin);
+    const pPct = portfolioVal > 0 ? g.totalVal/portfolioVal*100 : 0;
+    const gainCls = g.totalGain>=0?'pos':'neg';
+    const gainSign = g.totalGain>=0?'+':'';
+    const barW = Math.min(Math.abs(g.totalGain)/maxGain*100,100);
+    const barClr = g.totalGain>=0?'var(--accent)':'var(--accent2)';
+
+    html += `<div class="stock-group" id="grp-${cid}-${idx}" style="animation:fadeIn 0.2s ${idx*18}ms both">
+      <div class="stock-header" onclick="toggleGroup('${cid}',${idx})">
+        <div class="sh-row1">
+          <div class="stock-name-wrap">
+            <span class="sector-badge" style="background:${sec.color}22;color:${sec.color};border:1px solid ${sec.color}44">${sec.icon}</span>
+            <span class="stock-name">${esc(g.name)}</span>
+            ${g.split?`<span class="split-badge">сплит ${g.split}</span>`:''}
+          </div>
+          <div class="sh-right">
+            <span class="portfolio-pct">${pPct.toFixed(1)}%</span>
+            <span class="chevron">▼</span>
+          </div>
+        </div>
+        <div class="sh-row2">
+          <span class="stock-total-val">${fmtRub(g.totalVal)}</span>
+          <span class="stock-total-gain ${gainCls}">${gainSign}${fmtRub(g.totalGain)} / ${gainSign}${g.totalPct.toFixed(1)}%</span>
+        </div>
+      </div>
+      <div class="pct-bar"><div class="pct-bar-fill" style="width:${pPct}%"></div></div>
+      <div class="stock-group-body">`;
+
+    g.brokers.forEach(b => {
+      const bPct = portfolioVal > 0 ? b.val/portfolioVal*100 : 0;
+      const bCls = b.gain>=0?'pos':'neg';
+      const bSign = b.gain>=0?'+':'';
+      const bBarW = Math.min(Math.abs(b.gain)/maxGain*100,100);
+      const liveTag = prices[g.isin] ? ' <span style="font-size:9px;color:var(--accent);font-weight:700">live</span>' : '';
+      html += `<div class="broker-row">
+        <div class="br-top">
+          <div class="br-left">
+            <span class="broker-badge ${b.broker}">${b.broker==='sber'?'🏦 Сбер':'🔴 Альфа'}</span>
+            <span class="br-qty">${b.qty.toLocaleString('ru-RU')} шт</span>
+            <span class="br-avgprice">avg ${fmt2(b.avgPrice)} ₽</span>
+          </div>
+          <div class="br-right">
+            <div class="br-value">${fmtRub(b.val)}</div>
+            <div class="br-gain ${bCls}">${bSign}${fmtRub(b.gain)} (${bSign}${b.pct.toFixed(1)}%)</div>
+          </div>
+        </div>
+        <div class="br-bottom">
+          <span class="br-curprice">${fmt2(b.cur)} ₽${liveTag}</span>
+          <span class="br-portpct">${bPct.toFixed(2)}% портфеля</span>
+        </div>
+        <div class="gain-bar-bg"><div class="gain-bar-fill" style="width:${bBarW}%;background:${b.gain>=0?'var(--accent)':'var(--accent2)'}"></div></div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function toggleGroup(cid, idx) {
+  document.getElementById(`grp-${cid}-${idx}`).classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════════════
+// АНАЛИТИКА
+// ══════════════════════════════════════════════════════
+function renderAnalytics() {
+  const el = document.getElementById('analytics-content');
+  let stocks = analyticsBroker==='all' ? allStocks : allStocks.filter(s=>s.broker===analyticsBroker);
+
+  const wc = stocks.map(s => {
+    const cur = cp(s.isin, s.avgPrice);
+    const val = s.qty*cur, inv = s.qty*s.avgPrice, gain = val-inv;
+    return { ...s, cur, val, inv, gain, gainPct: inv>0?gain/inv*100:0 };
+  });
+
+  const totVal = wc.reduce((s,x)=>s+x.val,0);
+  const totInv = wc.reduce((s,x)=>s+x.inv,0);
+  const totGain = totVal - totInv;
+  const totPct  = totInv>0?totGain/totInv*100:0;
+  const winners = wc.filter(x=>x.gain>0).length;
+  const losers  = wc.filter(x=>x.gain<0).length;
+
+  // Группы по компании (для donut)
+  const grouped = new Map();
+  wc.forEach(s => {
+    if (!grouped.has(s.name)) grouped.set(s.name,{name:s.name,val:0,gain:0,inv:0});
+    const g=grouped.get(s.name); g.val+=s.val; g.gain+=s.gain; g.inv+=s.inv;
+  });
+  const grpArr = Array.from(grouped.values()).map(g=>({...g,pct:g.inv>0?g.gain/g.inv*100:0}));
+  const byVal = [...grpArr].sort((a,b)=>b.val-a.val);
+  const top5 = byVal.slice(0,5), restV = byVal.slice(5).reduce((s,x)=>s+x.val,0);
+
+  // Топы
+  const top5gain  = [...wc].sort((a,b)=>b.gain-a.gain).slice(0,5);
+  const bot5gain  = [...wc].sort((a,b)=>a.gain-b.gain).slice(0,5);
+  const top5pct   = [...wc].sort((a,b)=>b.gainPct-a.gainPct).slice(0,5);
+  const bot5pct   = [...wc].sort((a,b)=>a.gainPct-b.gainPct).slice(0,5);
+
+  // Брокеры
+  const sberW = allStocks.map(s=>({...s,cur:cp(s.isin,s.avgPrice)})).filter(s=>s.broker==='sber');
+  const alfaW = allStocks.map(s=>({...s,cur:cp(s.isin,s.avgPrice)})).filter(s=>s.broker==='alfa');
+  const sberVal=sberW.reduce((a,s)=>a+s.qty*s.cur,0), sberInv=sberW.reduce((a,s)=>a+s.qty*s.avgPrice,0);
+  const alfaVal=alfaW.reduce((a,s)=>a+s.qty*s.cur,0), alfaInv=alfaW.reduce((a,s)=>a+s.qty*s.avgPrice,0);
+  const sberGain=sberVal-sberInv, alfaGain=alfaVal-alfaInv;
+  const sberPct=sberInv>0?sberGain/sberInv*100:0, alfaPct=alfaInv>0?alfaGain/alfaInv*100:0;
+  const maxBrk=Math.max(sberVal,alfaVal,1);
+
+  // Секторы
+  const sectorMap = new Map();
+  wc.forEach(s => {
+    const sec = getSector(s.isin);
+    if (!sectorMap.has(sec.name)) sectorMap.set(sec.name,{...sec,stocks:[],val:0,inv:0,gain:0});
+    const sg=sectorMap.get(sec.name); sg.stocks.push(s); sg.val+=s.val; sg.inv+=s.inv; sg.gain+=s.gain;
+  });
+  const sectorArr = Array.from(sectorMap.values()).map(sg=>({...sg,pct:sg.inv>0?sg.gain/sg.inv*100:0})).sort((a,b)=>b.val-a.val);
+
+  const COLORS = ['#79c0ff','#3fb950','#bc8cff','#f78166','#e3b341','#484f58'];
+
+  function donutSvg(segs) {
+    const r=40,cx=50,cy=50,circ=2*Math.PI*r;
+    let off=0,paths='';
+    segs.forEach(([pct,clr])=>{
+      const dash=pct/100*circ;
+      paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${clr}" stroke-width="14" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${(1-off/100)*circ}" transform="rotate(-90 ${cx} ${cy})"/>`;
+      off+=pct;
+    });
+    return `<svg width="100" height="100" viewBox="0 0 100 100" style="flex-shrink:0"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="14"/>${paths}</svg>`;
+  }
+
+  const donutSegs = top5.map((g,i)=>[totVal>0?g.val/totVal*100:0,COLORS[i]]);
+  if (restV>0) donutSegs.push([totVal>0?restV/totVal*100:0,COLORS[5]]);
+
+  // Подвкладки аналитики
+  let html = `<div class="broker-switch">
+    <button class="broker-btn ${analyticsBroker==='all'?'active':''}" onclick="setAnBroker('all')">📊 Все</button>
+    <button class="broker-btn ${analyticsBroker==='sber'?'active':''}" onclick="setAnBroker('sber')">🏦 Сбер</button>
+    <button class="broker-btn ${analyticsBroker==='alfa'?'active':''}" onclick="setAnBroker('alfa')">🔴 Альфа</button>
+  </div>
+  <div class="tabs" style="margin-bottom:16px">
+    <button class="tab-btn ${analyticsSubTab==='summary'?'active':''}" onclick="setAnSubTab('summary')">📊 Сводка</button>
+    <button class="tab-btn ${analyticsSubTab==='sectors'?'active':''}" onclick="setAnSubTab('sectors')">🏭 Секторы</button>
+    <button class="tab-btn ${analyticsSubTab==='tops'?'active':''}" onclick="setAnSubTab('tops')">🏆 Топы</button>
+  </div>`;
+
+  // ── СВОДКА ──
+  if (analyticsSubTab==='summary') {
+    html += `<div class="an-section"><div class="an-title">📊 Общие показатели</div><div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Вложено</div><div class="kpi-val" style="color:var(--yellow);font-size:14px">${fmtRub(totInv)}</div><div class="kpi-sub">${wc.length} позиций</div></div>
+      <div class="kpi-card"><div class="kpi-label">Стоимость</div><div class="kpi-val" style="color:var(--accent3);font-size:14px">${fmtRub(totVal)}</div><div class="kpi-sub">${grouped.size} эмитентов</div></div>
+      <div class="kpi-card"><div class="kpi-label">Финансовый результат</div><div class="kpi-val" style="color:${totGain>=0?'var(--accent)':'var(--accent2)'};font-size:14px">${totGain>=0?'+':''}${fmtRub(totGain)}</div><div class="kpi-sub">${fmtPct(totPct)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Позиции в плюсе / минусе</div><div class="kpi-val" style="color:var(--purple)">${winners}↑ / ${losers}↓</div><div class="kpi-sub">из ${wc.length} всего</div></div>
+    </div></div>`;
+
+    if (analyticsBroker==='all') {
+      html += `<div class="an-section"><div class="an-title">🏦 По брокерам</div><div class="broker-compare">
+        <div class="bc-card" style="border-color:rgba(63,185,80,0.3)">
+          <div class="bc-title" style="color:var(--sber)">🏦 Сбербанк</div>
+          <div class="bc-val" style="font-size:13px">${fmtRub(sberVal)}</div>
+          <div class="bc-gain ${sberGain>=0?'pos':'neg'}">${sberGain>=0?'+':''}${fmtRub(sberGain)}</div>
+          <div class="bc-sub">${fmtPct(sberPct)} · ${sberW.length} поз.</div>
+          <div class="bc-bar-bg"><div class="bc-bar-fill" style="width:${sberVal/maxBrk*100}%;background:var(--sber)"></div></div>
+        </div>
+        <div class="bc-card" style="border-color:rgba(208,64,64,0.3)">
+          <div class="bc-title" style="color:var(--alfa)">🔴 Альфа-Банк</div>
+          <div class="bc-val" style="font-size:13px">${fmtRub(alfaVal)}</div>
+          <div class="bc-gain ${alfaGain>=0?'pos':'neg'}">${alfaGain>=0?'+':''}${fmtRub(alfaGain)}</div>
+          <div class="bc-sub">${fmtPct(alfaPct)} · ${alfaW.length} поз.</div>
+          <div class="bc-bar-bg"><div class="bc-bar-fill" style="width:${alfaVal/maxBrk*100}%;background:var(--alfa)"></div></div>
+        </div>
+      </div></div>`;
+    }
+
+    html += `<div class="an-section"><div class="an-title">🥧 Структура по эмитентам</div><div class="donut-wrap">
+      ${donutSvg(donutSegs)}
+      <div class="donut-list">`;
+    top5.forEach((g,i) => {
+      const pct = totVal>0?g.val/totVal*100:0;
+      html+=`<div class="donut-row"><div class="donut-name"><div style="width:8px;height:8px;border-radius:50%;background:${COLORS[i]};flex-shrink:0"></div>${esc(g.name)}</div><div class="donut-right"><div class="donut-pct">${pct.toFixed(1)}%</div><div class="donut-val">${fmtRub(g.val)}</div></div></div>`;
+    });
+    if (restV>0) { const rpct=totVal>0?restV/totVal*100:0; html+=`<div class="donut-row"><div class="donut-name"><div style="width:8px;height:8px;border-radius:50%;background:${COLORS[5]};flex-shrink:0"></div>Остальные (${byVal.length-5})</div><div class="donut-right"><div class="donut-pct">${rpct.toFixed(1)}%</div><div class="donut-val">${fmtRub(restV)}</div></div></div>`; }
+    html += `</div></div></div>`;
+  }
+
+  // ── СЕКТОРЫ ──
+  if (analyticsSubTab==='sectors') {
+    const secDonutSegs = sectorArr.slice(0,6).map((s,i)=>[totVal>0?s.val/totVal*100:0, s.color]);
+    html += `<div class="an-section"><div class="an-title">🏭 Распределение по секторам</div><div class="donut-wrap" style="margin-bottom:14px">
+      ${donutSvg(secDonutSegs)}
+      <div class="donut-list">`;
+    sectorArr.forEach(s => {
+      const pct = totVal>0?s.val/totVal*100:0;
+      html+=`<div class="donut-row"><div class="donut-name"><div style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0"></div>${s.icon} ${esc(s.name)}</div><div class="donut-right"><div class="donut-pct">${pct.toFixed(1)}%</div><div class="donut-val">${fmtRub(s.val)}</div></div></div>`;
+    });
+    html += `</div></div></div>`;
+
+    sectorArr.forEach((sec, sidx) => {
+      const secPct = totVal>0?sec.val/totVal*100:0;
+      const gainCls = sec.gain>=0?'pos':'neg';
+      const gainSign = sec.gain>=0?'+':'';
+      html += `<div class="sector-row" id="sec-${sidx}">
+        <div class="sector-header" onclick="toggleSector(${sidx})">
+          <div class="sector-icon">${sec.icon}</div>
+          <div class="sector-hinfo">
+            <div class="sector-hname">${esc(sec.name)}</div>
+            <div class="sector-hvals">${sec.stocks.length} позиций · ${secPct.toFixed(1)}% портфеля</div>
+          </div>
+          <div class="sector-hright">
+            <div class="sector-hval">${fmtRub(sec.val)}</div>
+            <div class="sector-hgain ${gainCls}">${gainSign}${fmtRub(sec.gain)} / ${gainSign}${sec.pct.toFixed(1)}%</div>
+          </div>
+          <span class="chevron" style="font-size:10px;color:var(--text3);margin-left:8px;transition:transform 0.2s">▼</span>
+        </div>
+        <div class="sector-bar"><div class="sector-bar-fill" style="width:${secPct}%;background:${sec.color}"></div></div>
+        <div class="sector-stocks">`;
+      sec.stocks.sort((a,b)=>b.val-a.val).forEach(s => {
+        const sCls=s.gain>=0?'pos':'neg', sSign=s.gain>=0?'+':'';
+        const bb = s.broker==='sber'?'sber':'alfa';
+        html+=`<div class="sector-stock-item">
+          <span class="ssi-name">${esc(s.name)}</span>
+          <span class="ssi-broker broker-badge ${bb}" style="font-size:9px;padding:1px 5px">${s.broker==='sber'?'Сбер':'Альфа'}</span>
+          <div class="ssi-right">
+            <div class="ssi-val">${fmtRub(s.val)}</div>
+            <div class="ssi-gain ${sCls}">${sSign}${fmtRub(s.gain)} / ${sSign}${s.gainPct.toFixed(1)}%</div>
+          </div>
+        </div>`;
+      });
+      html += `</div></div>`;
+    });
+  }
+
+  // ── ТОПЫ ──
+  if (analyticsSubTab==='tops') {
+    function topBlock(title, arr, pos) {
+      let h=`<div class="an-section"><div class="an-title">${title}</div><div class="top-list">`;
+      arr.filter(p=>pos?p.gain>0:p.gain<0).slice(0,5).forEach((p,i)=>{
+        const cls=p.gain>=0?'pos':'neg', sign=p.gain>=0?'+':'';
+        const bb=p.broker==='sber'?'sber':'alfa';
+        h+=`<div class="top-item">
+          <div class="top-rank">${i+1}</div>
+          <div class="top-info">
+            <div class="top-name">${esc(p.name)}</div>
+            <div class="top-sub"><span class="broker-badge ${bb}" style="font-size:9px;padding:1px 5px">${p.broker==='sber'?'Сбер':'Альфа'}</span> · ${p.qty.toLocaleString('ru-RU')} шт · avg ${fmt2(p.avgPrice)} ₽ → ${fmt2(p.cur)} ₽</div>
+          </div>
+          <div class="top-val ${cls}">${sign}${fmtRub(p.gain)}<br><span style="font-size:10px">${sign}${p.gainPct.toFixed(1)}%</span></div>
+        </div>`;
+      });
+      h+=`</div></div>`;
+      return h;
+    }
+    function topPctBlock(title, arr, pos) {
+      let h=`<div class="an-section"><div class="an-title">${title}</div><div class="top-list">`;
+      arr.filter(p=>pos?p.gainPct>0:p.gainPct<0).slice(0,5).forEach((p,i)=>{
+        const cls=p.gainPct>=0?'pos':'neg', sign=p.gainPct>=0?'+':'';
+        const bb=p.broker==='sber'?'sber':'alfa';
+        h+=`<div class="top-item">
+          <div class="top-rank">${i+1}</div>
+          <div class="top-info">
+            <div class="top-name">${esc(p.name)}</div>
+            <div class="top-sub"><span class="broker-badge ${bb}" style="font-size:9px;padding:1px 5px">${p.broker==='sber'?'Сбер':'Альфа'}</span> · ${fmt2(p.avgPrice)} ₽ → ${fmt2(p.cur)} ₽</div>
+          </div>
+          <div class="top-val ${cls}">${sign}${p.gainPct.toFixed(1)}%<br><span style="font-size:10px">${sign}${fmtRub(p.gain)}</span></div>
+        </div>`;
+      });
+      h+=`</div></div>`;
+      return h;
+    }
+    html += topBlock('🏆 Лучшие по результату (₽)', top5gain, true);
+    html += topPctBlock('🚀 Лучшие по доходности (%)', top5pct, true);
+    html += topBlock('📉 Худшие по результату (₽)', bot5gain, false);
+    html += topPctBlock('💸 Худшие по доходности (%)', bot5pct, false);
+  }
+
+  el.innerHTML = html;
+}
+
+function toggleSector(idx) {
+  const el = document.getElementById(`sec-${idx}`);
+  el.classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════════════
+// ДЕТИ
+// ══════════════════════════════════════════════════════
+function renderChildren() {
+  const el = document.getElementById('children-content');
+  // Убираем summary из шапки — для детей она не нужна
+  document.getElementById('summary').style.display = 'none';
+
+  let html = '';
+  CHILDREN.forEach(child => {
+    // Используем live-цены если загружены
+    const stocks = child.stocks.map(s => {
+      const lp = prices[s.isin];
+      if (lp) {
+        const cv = s.qty * lp, g = cv - s.invested;
+        return { ...s, currentPrice: lp, currentValue: cv, gain: g, gainPct: s.invested>0?g/s.invested*100:0 };
+      }
+      return { ...s, gain: s.gain, gainPct: s.gainPct };
+    });
+
+    const totInv = stocks.reduce((a,s)=>a+s.invested,0);
+    const totVal = stocks.reduce((a,s)=>a+s.currentValue,0);
+    const totG   = totVal - totInv;
+    const totPct = totInv>0?totG/totInv*100:0;
+    const maxG   = Math.max(...stocks.map(s=>Math.abs(s.gain)),1);
+
+    html += `<div class="child-section">
+      <div class="child-header">
+        <div class="child-name">${child.emoji} ${child.name}</div>
+        <div class="child-kpi">
+          <div class="child-kpi-card"><div class="ck-label">Вложено</div><div class="ck-val" style="color:var(--yellow);font-size:11px">${fmtRub(totInv)}</div></div>
+          <div class="child-kpi-card"><div class="ck-label">Стоимость</div><div class="ck-val" style="color:var(--accent3);font-size:11px">${fmtRub(totVal)}</div></div>
+          <div class="child-kpi-card"><div class="ck-label">Результат</div>
+            <div class="ck-val" style="color:${totG>=0?'var(--accent)':'var(--accent2)'};font-size:11px">${totG>=0?'+':''}${fmtRub(totG)}<br><span style="font-size:9px">${totPct>=0?'+':''}${totPct.toFixed(1)}%</span></div>
+          </div>
+        </div>
+      </div>`;
+
+    const sorted = [...stocks].sort((a,b)=>b.currentValue-a.currentValue);
+    sorted.forEach(s => {
+      const sec = getSector(s.isin);
+      const gainCls = s.gain>=0?'pos':'neg', gainSign=s.gain>=0?'+':'';
+      const barW = Math.min(Math.abs(s.gain)/maxG*100,100);
+      const liveTag = prices[s.isin] ? ' <span style="font-size:9px;color:var(--accent);font-weight:700">live</span>' : '';
+      html += `<div class="child-stock-row">
+        <div class="csr-info">
+          <div class="csr-name">
+            <span style="font-size:11px;margin-right:4px">${sec.icon}</span>${esc(s.name)}
+            ${s.split?`<span class="split-badge" style="margin-left:4px">сплит ${s.split}</span>`:''}
+          </div>
+          <div class="csr-meta">
+            <span class="csr-qty">${s.qty.toLocaleString('ru-RU')} шт</span>
+            <span>avg ${fmt2(s.avgPrice)} ₽</span>
+            <span style="color:var(--yellow)">${fmt2(s.currentPrice)} ₽${liveTag}</span>
+          </div>
+          <div class="csr-bar-bg"><div class="csr-bar-fill" style="width:${barW}%;background:${s.gain>=0?'var(--accent)':'var(--accent2)'}"></div></div>
+        </div>
+        <div class="csr-right">
+          <div class="csr-val">${fmtRub(s.currentValue)}</div>
+          <div class="csr-gain ${gainCls}">${gainSign}${fmtRub(s.gain)}<br><span style="font-size:9px">${gainSign}${s.gainPct.toFixed(1)}%</span></div>
+        </div>
+      </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════
+// ПЕРЕКЛЮЧАТЕЛИ
+// ══════════════════════════════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  const tabs = ['all','sber','alfa','analytics','children'];
+  tabs.forEach(t => document.getElementById(`tab-${t}`).style.display = t===tab?'':'none');
+  document.querySelectorAll('.tabs:first-of-type .tab-btn, .topbar .tab-btn').forEach((b,i) => b.classList.toggle('active',i===tabs.indexOf(tab)));
+  // summary
+  document.getElementById('summary').style.display = (tab==='analytics'||tab==='children') ? 'none' : '';
+  renderAll();
+}
+
+function setSort(s) { sortMode=s; renderAll(); }
+function setAnBroker(b) { analyticsBroker=b; renderAnalytics(); }
+function setAnSubTab(t) { analyticsSubTab=t; renderAnalytics(); }
+
+// ══════════════════════════════════════════════════════
+// МОДАЛ
+// ══════════════════════════════════════════════════════
+function openModal() { document.getElementById('add-modal').classList.add('open'); }
+function closeModal() { document.getElementById('add-modal').classList.remove('open'); }
+function confirmAdd() {
+  const isin=document.getElementById('m-isin').value.trim();
+  const name=document.getElementById('m-name').value.trim();
+  const qty=parseInt(document.getElementById('m-qty').value);
+  const avg=parseFloat(document.getElementById('m-price').value);
+  const broker=document.getElementById('m-broker').value;
+  if(!isin||!name||!qty||!avg){alert('Заполните все поля');return;}
+  allStocks.push({isin,name,qty,avgPrice:avg,broker});
+  savePortfolio(); closeModal(); renderAll();
+}
+
+// ══════════════════════════════════════════════════════
+// PWA
+// ══════════════════════════════════════════════════════
+(function(){
+  const m={name:'Акции Портфель',short_name:'Акции',start_url:'.',display:'standalone',
+    background_color:'#0d1117',theme_color:'#0d1117',
+    icons:[{src:'https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4c8.png',sizes:'72x72',type:'image/png'}]};
+  document.getElementById('pwa-manifest').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/json'}));
+})();
+
+loadAllPrices();
+</script>
+</body>
+</html>
